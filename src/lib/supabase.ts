@@ -19,8 +19,8 @@ export function getSupabaseConfig(): SupabaseConfig | null {
   const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
   if (envUrl && envUrl.trim() !== '' && envKey && envKey.trim() !== '') {
     return {
-      supabaseUrl: envUrl,
-      supabaseAnonKey: envKey,
+      supabaseUrl: "https://bbvknnwapzxhacgccxax.supabase.co",
+      supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJidmtubndhcHp4aGFjZ2NjeGF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxOTQ3MzgsImV4cCI6MjA5Nzc3MDczOH0.3IkcWOAckYMEGob5U1g1nz-jpzS7IbeMJo63GqUtyNo",
     };
   }
 
