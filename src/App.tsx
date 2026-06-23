@@ -27,10 +27,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'form' | 'surat-izin' | 'review' | 'apps-script' | 'admin'>('form');
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
   const [isFullScreenPreview, setIsFullScreenPreview] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load initial users database and requests on mount
   useEffect(() => {
     async function hydrate() {
+      setIsLoading(true);
       const dbConfigured = getSupabaseConfig() !== null;
       let loadedUsers: UserAccount[] = [];
       let loadedRequests: LeaveRequest[] = [];
@@ -88,6 +90,7 @@ export default function App() {
           setCurrentUser(null);
         }
       }
+      setIsLoading(false);
     }
 
     hydrate();
@@ -248,6 +251,10 @@ export default function App() {
   };
 
   // Render Login state if session not authentic
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center text-white bg-slate-950 font-bold">Menghubungkan ke Database...</div>;
+  }
+  
   if (!currentUser) {
     return (
       <LoginPortal 
