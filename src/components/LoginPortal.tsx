@@ -5,15 +5,17 @@ import { klhLogoBase64 } from './klhLogoBase64';
 interface LoginPortalProps {
   users: UserAccount[];
   onLoginSuccess: (user: UserAccount) => void;
+  onRefreshUsers?: () => Promise<UserAccount[]>;
 }
 
-export const LoginPortal: React.FC<LoginPortalProps> = ({ users, onLoginSuccess }) => {
+export const LoginPortal: React.FC<LoginPortalProps> = ({ users, onLoginSuccess, onRefreshUsers }) => {
   const [activePortal, setActivePortal] = useState<'pegawai' | 'verifikator'>('pegawai');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -22,13 +24,30 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({ users, onLoginSuccess 
       return;
     }
 
+    setIsLoggingIn(true);
+    let currentUsersList = users;
+
+    try {
+      // Fetch latest users directly from Supabase, so newly inputted accounts work instantly!
+      if (onRefreshUsers) {
+        const fresh = await onRefreshUsers();
+        if (fresh && fresh.length > 0) {
+          currentUsersList = fresh;
+        }
+      }
+    } catch (err: any) {
+      console.warn('Failed to fetch live database users on login, using local/cached memory.', err);
+    }
+
     // Authenticate
-    const matched = users.find(
+    const matched = currentUsersList.find(
       (u) => u.username.toLowerCase() === username.trim().toLowerCase() && u.password === password
     );
 
+    setIsLoggingIn(false);
+
     if (!matched) {
-      setErrorMsg('Username atau Password yang Anda masukkan salah.');
+      setErrorMsg('Username atau Password yang Anda masukkan salah atau belum sinkron.');
       return;
     }
 
@@ -158,10 +177,18 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({ users, onLoginSuccess 
 
           <button
             type="submit"
-            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-750 text-white font-bold text-xs uppercase rounded-xl tracking-wider transition shadow-lg shadow-emerald-500/10 mt-6"
+            disabled={isLoggingIn}
+            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-750 text-white font-bold text-xs uppercase rounded-xl tracking-wider transition shadow-lg shadow-emerald-500/10 mt-6 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             id="login-btn-submit"
           >
-            Masuk Ke Aplikasi
+            {isLoggingIn ? (
+              <>
+                <span className="h-3 w-3 border-2 border-emerald-300 border-t-white rounded-full animate-spin" />
+                <span>Menghubungkan ke Database...</span>
+              </>
+            ) : (
+              <span>Masuk Ke Aplikasi</span>
+            )}
           </button>
         </form>
 

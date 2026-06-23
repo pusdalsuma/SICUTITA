@@ -314,7 +314,21 @@ export default function App() {
 
   // Render Login state if session not authentic
   if (!currentUser) {
-    return <LoginPortal users={users} onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <LoginPortal 
+        users={users} 
+        onLoginSuccess={handleLoginSuccess} 
+        onRefreshUsers={async () => {
+          const freshUsers = await fetchUsersFromSupabase();
+          if (freshUsers && freshUsers.length > 0) {
+            setUsers(freshUsers);
+            localStorage.setItem('pplh_user_accounts', JSON.stringify(freshUsers));
+            return freshUsers;
+          }
+          return users;
+        }}
+      />
+    );
   }
 
   return (

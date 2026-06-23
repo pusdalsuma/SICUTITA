@@ -14,7 +14,17 @@ const CONFIG_KEY = 'pplh_supabase_config';
 
 // Load configuration
 export function getSupabaseConfig(): SupabaseConfig | null {
-  // Check localStorage first
+  // 1. Prioritize Environment Variables first for an "always-on" online setup across devices
+  const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
+  const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+  if (envUrl && envUrl.trim() !== '' && envKey && envKey.trim() !== '') {
+    return {
+      supabaseUrl: envUrl,
+      supabaseAnonKey: envKey,
+    };
+  }
+
+  // 2. Fallback check on localStorage if environment variables are empty
   const localConfig = localStorage.getItem(CONFIG_KEY);
   if (localConfig) {
     try {
@@ -25,16 +35,6 @@ export function getSupabaseConfig(): SupabaseConfig | null {
     } catch (e) {
       console.error('Failed to parse saved Supabase credentials', e);
     }
-  }
-
-  // Fallback to environment variables
-  const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
-  const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
-  if (envUrl && envKey) {
-    return {
-      supabaseUrl: envUrl,
-      supabaseAnonKey: envKey,
-    };
   }
 
   return null;
