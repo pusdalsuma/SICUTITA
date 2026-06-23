@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { UserAccount, UserRole } from '../types';
-import { getSupabaseConfig, saveSupabaseConfig, testConnection } from '../lib/supabase';
+import {
+  getSupabaseConfig,
+  saveSupabaseConfig,
+  testConnection,
+  seedInitialUsersToSupabase,
+  seedInitialRequestsToSupabase
+} from '../lib/supabase';
 
 interface AdminPanelProps {
   users: UserAccount[];
@@ -22,12 +28,66 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [supabaseUrl, setSupabaseUrl] = useState(dbConfig?.supabaseUrl || '');
   const [supabaseAnonKey, setSupabaseAnonKey] = useState(dbConfig?.supabaseAnonKey || '');
   const [isTestingConn, setIsTestingConn] = useState(false);
-  const [testResult, setTestResult] = useState<'idle' | 'success' | 'failed' | 'no-tables'>(
+  const [testResult, setTestResult] = useState<'idle' | 'success' | 'empty-tables' | 'no-tables' | 'failed'>(
     dbConfig ? 'success' : 'idle'
   );
   const [errorMessage, setErrorMessage] = useState('');
   const [isSqlExpanded, setIsSqlExpanded] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  // Auto test database connection details on mount if already configured
+  useEffect(() => {
+    async function checkDb() {
+      if (dbConfig) {
+        setIsTestingConn(true);
+        const res = await testConnection(dbConfig.supabaseUrl, dbConfig.supabaseAnonKey);
+        setIsTestingConn(false);
+        if (res.connected) {
+          if (res.hasTables) {
+            if (res.userCount === 0) {
+              setTestResult('empty-tables');
+            } else {
+              setTestResult('success');
+            }
+          } else {
+            setTestResult('no-tables');
+            setErrorMessage(res.error || '');
+          }
+        } else {
+          setTestResult('failed');
+          setErrorMessage(res.error || 'Gagal tersambung ke server Supabase.');
+        }
+      }
+    }
+    checkDb();
+  }, [dbConfig]);
+
+  const handleSeedDatabase = async () => {
+    if (window.confirm('Apakah Anda ingin mengisi database Supabase dengan semua akun demo bawaan (admin, pegawai, atasan, pejabat) & pengajuan awal secara otomatis?')) {
+      setIsSeeding(true);
+      setErrorMessage('');
+      try {
+        const userSeed = await seedInitialUsersToSupabase();
+        if (!userSeed.success) {
+          throw new Error(`Data pengguna gagal: ${userSeed.error}`);
+        }
+        
+        const reqSeed = await seedInitialRequestsToSupabase();
+        if (!reqSeed.success) {
+          throw new Error(`Data pengajuan gagal: ${reqSeed.error}`);
+        }
+
+        alert(`🎉 Database berhasil diisi otomatis!\n\n- Berhasil meng-upload ${userSeed.count} akun default.\n- Berhasil meng-upload ${reqSeed.count} draf pengajuan awal.\n\nHalaman akan dimuat ulang.`);
+        window.location.reload();
+      } catch (err: any) {
+        setErrorMessage(err.message || String(err));
+        alert(`❌ Gagal inisialisasi: ${err.message || String(err)}`);
+      } finally {
+        setIsSeeding(false);
+      }
+    }
+  };
   
   // Form States for creating/modifying users
   const [username, setUsername] = useState('');
@@ -411,6 +471,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${
                 testResult === 'success'
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  : testResult === 'empty-tables'
+                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                  : testResult === 'no-tables'
+                  ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 font-medium'
                   : testResult === 'idle'
                   ? 'bg-slate-800/20 text-slate-400 border-slate-800'
                   : 'bg-red-500/10 text-red-400 border-red-500/20'
@@ -418,12 +482,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <span className={`h-1.5 w-1.5 rounded-full ${
                   testResult === 'success'
                     ? 'bg-emerald-400 animate-pulse'
+                    : testResult === 'empty-tables'
+                    ? 'bg-amber-400 animate-pulse'
+                    : testResult === 'no-tables'
+                    ? 'bg-blue-400'
                     : testResult === 'idle'
                     ? 'bg-slate-400'
                     : 'bg-red-400'
                 }`} />
                 {testResult === 'success'
                   ? 'Active / Connected (Supabase)'
+                  : testResult === 'empty-tables'
+                  ? 'Connected But Empty (Need Seeding)'
+                  : testResult === 'no-tables'
+                  ? 'Connected but Tables Missing (Need SQL)'
                   : testResult === 'idle'
                   ? 'Offline Mode (Local Storage)'
                   : 'Disconnected / Error'}
@@ -465,8 +537,47 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
 
               {errorMessage && (
-                <div className="p-3.5 bg-red-950/25 text-red-400 rounded-xl border border-red-900/40 text-xs font-mono leading-relaxed">
-                  ⚠️ <strong>Error Detail:</strong> {errorMessage}
+                <div className="p-3.5 bg-red-950/25 text-red-500 rounded-xl border border-red-900/40 text-[11px] font-mono leading-relaxed whitespace-pre-wrap">
+                  ⚠️ <strong>Info / Error Detail:</strong> {errorMessage}
+                </div>
+              )}
+
+              {testResult === 'empty-tables' && (
+                <div className="p-4 bg-amber-955/20 text-amber-300 rounded-xl border border-amber-500/20 text-xs leading-relaxed space-y-3 shadow-lg">
+                  <div className="font-bold flex items-center gap-1.5 text-amber-400">
+                    💡 Tips: Struktur Tabel OK, tetapi Database Kosong!
+                  </div>
+                  <p>
+                    Tabel database berhasil ditemukan di akun Supabase Anda, tetapi tidak ada satupun data di dalamnya (termasuk user admin). Silakan ketuk tombol di bawah untuk mengisi database secara otomatis dengan seluruh akun bawaan (admin, pegawai, atasan, pejabat) dan pengajuan demo awal:
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleSeedDatabase}
+                    disabled={isSeeding}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 active:bg-amber-750 text-white font-bold rounded-xl transition flex items-center gap-2"
+                  >
+                    {isSeeding ? (
+                      <>
+                        <span className="h-3 w-3 border-2 border-slate-300 border-t-white rounded-full animate-spin" />
+                        <span>Sedang Mengunggah Data Bawaan...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🚀 Isi Akun Bawaan Secara Otomatis</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {testResult === 'no-tables' && (
+                <div className="p-4 bg-blue-955/20 text-blue-300 rounded-xl border border-blue-500/25 text-xs leading-relaxed space-y-2.5 shadow-lg">
+                  <div className="font-bold flex items-center gap-1.5 text-blue-400">
+                    📢 Perhatian: Tabel Basis Data Belum Terbuat!
+                  </div>
+                  <p>
+                    Sistem berhasil berkomunikasi dengan server Supabase Anda, namun tidak menemukan tabel <strong>pplh_user_accounts</strong>. Harap salin SQL Schema di panel sebelah kanan dan jalankan di <strong>SQL Editor</strong> Supabase Anda terlebih dahulu agar portal ini dapat aktif.
+                  </p>
                 </div>
               )}
 
@@ -480,17 +591,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     }
                     setIsTestingConn(true);
                     setErrorMessage('');
-                    const isOk = await testConnection(supabaseUrl, supabaseAnonKey);
+                    const res = await testConnection(supabaseUrl, supabaseAnonKey);
                     setIsTestingConn(false);
-                    if (isOk) {
+                    if (res.connected) {
                       saveSupabaseConfig({ supabaseUrl, supabaseAnonKey });
-                      setTestResult('success');
-                      alert('✅ Koneksi Supabase berhasil dipasang dan diaktifkan!');
-                      // Trigger main UI memory synchronization
-                      window.location.reload();
+                      if (res.hasTables) {
+                        if (res.userCount === 0) {
+                          setTestResult('empty-tables');
+                          alert('✅ Sambungan Berhasil!\n\nTabel ditemukan di database, tetapi masih kosong belum ada data akun. Anda dapat mengklik tombol "Isi Akun Bawaan Secara Otomatis" di atas.');
+                        } else {
+                          setTestResult('success');
+                          alert('✅ Sambungan Berhasil!\n\nDatabase Supabase Anda telah aktif dan terhubung sempurna!');
+                          window.location.reload();
+                        }
+                      } else {
+                        setTestResult('no-tables');
+                        setErrorMessage(res.error || '');
+                        alert('🔌 Tersambung ke Supabase!\n\nTabel database Anda belum dibuat. Harap ikuti petunjuk SQL Editor di panel sebelah kanan.');
+                      }
                     } else {
                       setTestResult('failed');
-                      setErrorMessage('Gagal menghubungi tabel database Supabase Anda. Mohon pastikan kredensial benar dan SQL Schema di sebelah kanan sudah Anda jalankan di SQL Editor Supabase.');
+                      setErrorMessage(res.error || 'Gagal tersambung. Periksa kembali URL dan Anon Key Anda.');
+                      alert('❌ Koneksi Gagal!\n\nMohon pastikan URL dan Anon Key Supabase sudah benar.');
                     }
                   }}
                   disabled={isTestingConn}

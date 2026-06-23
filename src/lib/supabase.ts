@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { UserAccount, LeaveRequest } from '../types';
+import { initialUsers } from '../initialUsers';
+import { initialRequests } from '../initialData';
 
 // Let's define the configuration interface
 export interface SupabaseConfig {
@@ -85,22 +87,137 @@ export function getSupabaseClient() {
 // Helper functions for Database Operations
 // -------------------------------------------------------------------------
 
+export interface TestConnectionResult {
+  connected: boolean;
+  hasTables: boolean;
+  userCount: number;
+  error?: string;
+}
+
 /**
- * Checks connectivity by running a simple query.
+ * Checks connectivity by running detailed table verification.
  */
-export async function testConnection(url: string, key: string): Promise<boolean> {
+export async function testConnection(url: string, key: string): Promise<TestConnectionResult> {
   try {
     const cleanedUrl = cleanSupabaseUrl(url);
     const client = createClient(cleanedUrl, key, { auth: { persistSession: false } });
-    const { error } = await client.from('pplh_user_accounts').select('id').limit(1);
-    if (error && error.code !== 'PGRST116' && error.message.indexOf('relation') === -1) {
-      console.warn('Test query error:', error);
-      return false;
+    
+    // Check if we can query the pplh_user_accounts table
+    const { data, error } = await client.from('pplh_user_accounts').select('id');
+    
+    if (error) {
+      const isMissingTable = error.message?.toLowerCase().includes('relation') || 
+                             error.message?.toLowerCase().includes('does not exist');
+      if (isMissingTable) {
+        return {
+          connected: true,
+          hasTables: false,
+          userCount: 0,
+          error: `Tabel 'pplh_user_accounts' belum terbuat dalam database database Supabase Anda. Sila jalankan script SQL Schema SQL Editor di sebelah kanan.`
+        };
+      }
+      
+      return {
+        connected: false,
+        hasTables: false,
+        userCount: 0,
+        error: error.message
+      };
     }
-    return true;
-  } catch (err) {
+    
+    return {
+      connected: true,
+      hasTables: true,
+      userCount: data ? data.length : 0
+    };
+  } catch (err: any) {
     console.error('Test connection exception:', err);
-    return false;
+    return {
+      connected: false,
+      hasTables: false,
+      userCount: 0,
+      error: err?.message || String(err)
+    };
+  }
+}
+
+/**
+ * Seeds default initial users to Supabase database.
+ */
+export async function seedInitialUsersToSupabase(): Promise<{ success: boolean; count: number; error?: string }> {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { success: false, count: 0, error: 'Klien Supabase belum dikonfigurasi.' };
+  }
+
+  try {
+    const dbRows = initialUsers.map((user) => ({
+      id: user.id,
+      username: user.username,
+      password: user.password || '123',
+      role: user.role,
+      nama: user.nama,
+      nip: user.nip,
+      jabatan: user.jabatan || null,
+      unit_kerja: user.unitKerja || 'Pusat Pengendalian Lingkungan Hidup Suma',
+      masa_kerja: user.masaKerja || null,
+      bidang_wilayah: user.bidangWilayah || null,
+      signature_img: user.signatureImg || null,
+    }));
+
+    const { error } = await client.from('pplh_user_accounts').upsert(dbRows, { onConflict: 'id' });
+    if (error) {
+      console.error('Error seeding initial users:', error);
+      return { success: false, count: 0, error: error.message };
+    }
+
+    return { success: true, count: dbRows.length };
+  } catch (err: any) {
+    console.error('Exception seeding users:', err);
+    return { success: false, count: 0, error: err?.message || String(err) };
+  }
+}
+
+/**
+ * Seeds default initial requests to Supabase database.
+ */
+export async function seedInitialRequestsToSupabase(): Promise<{ success: boolean; count: number; error?: string }> {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { success: false, count: 0, error: 'Klien Supabase belum dikonfigurasi.' };
+  }
+
+  try {
+    const dbRows = initialRequests.map((req) => ({
+      id: req.id,
+      nomor_surat: req.nomorSurat || null,
+      tanggal_form: req.tanggalForm || null,
+      kepada_yth: req.kepadaYth || 'Kepada Yth. PPLH Sulawesi dan Maluku di Tempat',
+      pegawai: req.pegawai,
+      jenis_cuti: req.jenisCuti,
+      alasan_cuti: req.alasanCuti,
+      lamanya_cuti: req.lamanyaCuti,
+      tanggal_mulai: req.tanggalMulai,
+      tanggal_selesai: req.tanggalSelesai,
+      catatan_cuti: req.catatanCuti,
+      alamat_selama_cuti: req.alamatSelamaCuti,
+      telepon: req.telepon,
+      atasan: req.atasan,
+      pejabat: req.pejabat,
+      status_pengajuan: req.statusPengajuan,
+      created_at: req.createdAt || new Date().toISOString(),
+    }));
+
+    const { error } = await client.from('pplh_leave_requests').upsert(dbRows, { onConflict: 'id' });
+    if (error) {
+      console.error('Error seeding initial requests:', error);
+      return { success: false, count: 0, error: error.message };
+    }
+
+    return { success: true, count: dbRows.length };
+  } catch (err: any) {
+    console.error('Exception seeding requests:', err);
+    return { success: false, count: 0, error: err?.message || String(err) };
   }
 }
 
