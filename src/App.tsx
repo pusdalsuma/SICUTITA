@@ -41,91 +41,30 @@ export default function App() {
         if (supabaseUsers && supabaseUsers.length > 0) {
           loadedUsers = supabaseUsers;
           setUsers(supabaseUsers);
-          localStorage.setItem('pplh_user_accounts', JSON.stringify(supabaseUsers));
         } else {
-          const savedUsers = localStorage.getItem('pplh_user_accounts');
-          if (savedUsers) {
-            try {
-              loadedUsers = JSON.parse(savedUsers);
-              setUsers(loadedUsers);
-            } catch (e) {
-              loadedUsers = initialUsers;
-              setUsers(initialUsers);
-            }
-          } else {
             loadedUsers = initialUsers;
             setUsers(initialUsers);
-          }
         }
       } else {
-        const savedUsers = localStorage.getItem('pplh_user_accounts');
-        if (savedUsers) {
-          try {
-            loadedUsers = JSON.parse(savedUsers);
-            setUsers(loadedUsers);
-          } catch (e) {
-            loadedUsers = initialUsers;
-            setUsers(initialUsers);
-            localStorage.setItem('pplh_user_accounts', JSON.stringify(initialUsers));
-          }
-        } else {
           loadedUsers = initialUsers;
           setUsers(initialUsers);
-          localStorage.setItem('pplh_user_accounts', JSON.stringify(initialUsers));
-        }
       }
 
       // 2. Hydrate Leave Requests
       if (dbConfigured) {
         const supabaseRequests = await fetchRequestsFromSupabase();
-        if (supabaseRequests) {
+        if (supabaseRequests && supabaseRequests.length > 0) {
           loadedRequests = supabaseRequests;
           setRequests(supabaseRequests);
-          if (supabaseRequests.length > 0) {
-            setSelectedRequest(supabaseRequests[0]);
-          }
-          localStorage.setItem('pplh_leave_requests', JSON.stringify(supabaseRequests));
+          setSelectedRequest(supabaseRequests[0]);
         } else {
-          const savedRequests = localStorage.getItem('pplh_leave_requests');
-          if (savedRequests) {
-            try {
-              loadedRequests = JSON.parse(savedRequests);
-              setRequests(loadedRequests);
-              if (loadedRequests.length > 0) {
-                setSelectedRequest(loadedRequests[0]);
-              }
-            } catch (e) {
-              loadedRequests = initialRequests;
-              setRequests(initialRequests);
-              setSelectedRequest(initialRequests[0]);
-            }
-          } else {
-            loadedRequests = initialRequests;
-            setRequests(initialRequests);
-            setSelectedRequest(initialRequests[0]);
-          }
+          // If configured but empty, use empty list
+          loadedRequests = [];
+          setRequests([]);
         }
       } else {
-        const savedRequests = localStorage.getItem('pplh_leave_requests');
-        if (savedRequests) {
-          try {
-            const parsed = JSON.parse(savedRequests);
-            loadedRequests = parsed;
-            setRequests(parsed);
-            if (parsed.length > 0) {
-              setSelectedRequest(parsed[0]);
-            }
-          } catch (e) {
-            loadedRequests = initialRequests;
-            setRequests(initialRequests);
-            setSelectedRequest(initialRequests[0]);
-          }
-        } else {
-          loadedRequests = initialRequests;
-          setRequests(initialRequests);
-          setSelectedRequest(initialRequests[0]);
-          localStorage.setItem('pplh_leave_requests', JSON.stringify(initialRequests));
-        }
+        loadedRequests = [];
+        setRequests([]);
       }
 
       // 3. Hydrate Current User Session
