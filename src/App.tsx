@@ -328,7 +328,7 @@ export default function App() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-bold text-white tracking-wide uppercase">SICUTITA Leave Applet</h1>
+              <h1 className="text-sm font-bold text-white tracking-wide uppercase">SICUTITA</h1>
               <span className="text-[9px] bg-slate-950 px-2 py-0.5 rounded-full border border-slate-850 text-slate-400 font-bold">V2.0</span>
             </div>
             <p className="text-xs text-slate-400">Sistem Informasi Cuti & Izin Terintegrasi & Akurat</p>
