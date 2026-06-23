@@ -64,14 +64,29 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({ users, onLoginSuccess,
     onLoginSuccess(matched);
   };
 
-  const handleQuickLogin = (user: UserAccount, portal: 'pegawai' | 'verifikator') => {
+  const handleQuickLogin = async (user: UserAccount, portal: 'pegawai' | 'verifikator') => {
     setActivePortal(portal);
     setUsername(user.username);
     setPassword(user.password || '123');
     setErrorMsg('');
     
+    setIsLoggingIn(true);
+    let targetUser = user;
+    if (onRefreshUsers) {
+      try {
+        const fresh = await onRefreshUsers();
+        const latestInfo = fresh.find(u => u.id === user.id);
+        if (latestInfo) {
+          targetUser = latestInfo;
+        }
+      } catch (err) {
+        console.warn('Failed to refresh user during quick login', err);
+      }
+    }
+    setIsLoggingIn(false);
+    
     // Auto submit or trigger login
-    onLoginSuccess(user);
+    onLoginSuccess(targetUser);
   };
 
   return (
