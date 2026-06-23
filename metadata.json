@@ -1,0 +1,6 @@
+{
+  "name": "SICUTITA",
+  "description": "SICUTITA (Sistem Informasi Cuti & Izin Terintegrasi & Akurat) - Aplikasi pengajuan, persetujuan berjenjang, dan pencetakan formulir cuti serta surat izin pegawai dengan rumus kalkulator sisa cuti 12+6 hari.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
