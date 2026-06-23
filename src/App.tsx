@@ -93,10 +93,9 @@ export default function App() {
     hydrate();
   }, []);
 
-  // Sync state changes of requests back to localStorage
+  // Sync state changes of requests
   const updateRequestsState = (updatedList: LeaveRequest[]) => {
     setRequests(updatedList);
-    localStorage.setItem('pplh_leave_requests', JSON.stringify(updatedList));
   };
 
   // Auth Callbacks
@@ -124,14 +123,12 @@ export default function App() {
   const handleAddUser = async (newUser: UserAccount) => {
     const updated = [...users, newUser];
     setUsers(updated);
-    localStorage.setItem('pplh_user_accounts', JSON.stringify(updated));
     await upsertUserToSupabase(newUser);
   };
 
   const handleUpdateUser = async (updatedUser: UserAccount) => {
     const updated = users.map((u) => (u.id === updatedUser.id ? updatedUser : u));
     setUsers(updated);
-    localStorage.setItem('pplh_user_accounts', JSON.stringify(updated));
     if (currentUser?.id === updatedUser.id) {
       setCurrentUser(updatedUser);
       sessionStorage.setItem('pplh_current_user', JSON.stringify(updatedUser));
@@ -142,7 +139,6 @@ export default function App() {
   const handleDeleteUser = async (userId: string) => {
     const updated = users.filter((u) => u.id !== userId);
     setUsers(updated);
-    localStorage.setItem('pplh_user_accounts', JSON.stringify(updated));
     await deleteUserFromSupabase(userId);
   };
 
