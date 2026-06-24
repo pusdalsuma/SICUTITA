@@ -18,6 +18,7 @@ import {
   deleteUserFromSupabase,
   fetchRequestsFromSupabase,
   upsertRequestToSupabase,
+  deleteRequestFromSupabase,
 } from './lib/supabase';
 
 export default function App() {
@@ -143,6 +144,17 @@ export default function App() {
     const updated = users.filter((u) => u.id !== userId);
     setUsers(updated);
     await deleteUserFromSupabase(userId);
+  };
+
+  const handleDeleteRequest = async (requestId: string) => {
+    if (confirm('Apakah Anda yakin ingin menghapus pengajuan ini secara permanen?')) {
+      const updated = requests.filter((r) => r.id !== requestId);
+      updateRequestsState(updated);
+      await deleteRequestFromSupabase(requestId);
+      if (selectedRequest?.id === requestId) {
+        setSelectedRequest(updated.length > 0 ? updated[0] : null);
+      }
+    }
   };
 
   // Request Submit
@@ -495,6 +507,7 @@ export default function App() {
             <ReviewCuti
               requests={requests}
               onApprove={handleApprove}
+              onDelete={handleDeleteRequest}
               onSelectRequest={(req) => setSelectedRequest(req)}
               currentUser={currentUser}
             />

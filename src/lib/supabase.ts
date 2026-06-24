@@ -30,10 +30,18 @@ export function getSupabaseConfig(): SupabaseConfig | null {
     try {
       const parsed = JSON.parse(localConfig);
       if (parsed.supabaseUrl && parsed.supabaseAnonKey) {
-        return parsed;
+        // Validate URL format before returning
+        try {
+          new URL(parsed.supabaseUrl);
+          return parsed;
+        } catch(e) {
+          console.error('Invalid Supabase URL in localStorage, clearing:', parsed.supabaseUrl);
+          localStorage.removeItem(CONFIG_KEY);
+        }
       }
     } catch (e) {
       console.error('Failed to parse saved Supabase credentials', e);
+      localStorage.removeItem(CONFIG_KEY); // Clear junk
     }
   }
 
@@ -71,6 +79,16 @@ export function saveSupabaseConfig(config: SupabaseConfig | null) {
 export function getSupabaseClient() {
   const config = getSupabaseConfig();
   if (!config) return null;
+
+  // Validate URL format
+  try {
+    new URL(config.supabaseUrl);
+  } catch (e) {
+    console.error('Invalid Supabase URL in config, clearing saved config:', config.supabaseUrl);
+    saveSupabaseConfig(null);
+    return null;
+  }
+
   try {
     return createClient(config.supabaseUrl, config.supabaseAnonKey, {
       auth: {
@@ -410,6 +428,26 @@ export async function upsertRequestToSupabase(req: LeaveRequest): Promise<boolea
     return true;
   } catch (e) {
     console.error('Exception saving request:', e);
+    return false;
+  }
+}
+export async function deleteRequestFromSupabase(requestId: string): Promise<boolean> {
+  const client = getSupabaseClient();
+  if (!client) return false;
+
+  try {
+    const { error } = await client
+      .from('pplh_leave_requests')
+      .delete()
+      .eq('id', requestId);
+
+    if (error) {
+      console.error('Error deleting request from Supabase:', error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('Exception deleting request:', e);
     return false;
   }
 }

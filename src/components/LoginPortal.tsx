@@ -207,48 +207,6 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({ users, onLoginSuccess,
           </button>
         </form>
 
-        {/* Demo Quick login block */}
-        <div className="mt-8 pt-6 border-t border-slate-850">
-          <span className="text-[9px] uppercase tracking-wider font-bold text-slate-550 block mb-3 text-center">
-            💡 AKSES CEPAT (PILORED UNTUK PENGUJIAN)
-          </span>
-          
-          <div className="space-y-2">
-            
-            {/* Pegawai role click quick option */}
-            <div className="flex flex-wrap gap-2 justify-center">
-              {users.map((u) => {
-                const isPeg = u.role === 'pegawai';
-                const icon = u.role === 'pegawai' ? '👤' : u.role === 'atasan' ? '🤝' : u.role === 'pejabat' ? '👑' : '⚙️';
-                const badgeStyle = u.role === 'pegawai' 
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                  : u.role === 'atasan'
-                  ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                  : u.role === 'pejabat'
-                  ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                  : 'bg-slate-500/10 text-slate-300 border-slate-500/20';
-
-                return (
-                  <button
-                    key={u.id}
-                    onClick={() => handleQuickLogin(u, isPeg ? 'pegawai' : 'verifikator')}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-950 border border-slate-850 hover:border-emerald-600/50 hover:bg-slate-900 rounded-xl text-[10px] text-slate-300 transition text-left"
-                    title={`Login as ${u.nama}`}
-                  >
-                    <span>{icon}</span>
-                    <div className="leading-tight">
-                      <span className="font-bold text-[9px] text-white block">{u.username} <span className="font-normal text-slate-500">({u.role})</span></span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            <p className="text-[10px] text-slate-500 text-center mt-2 font-light">
-              Kata sandi awal semua akun adalah <strong className="text-slate-400 font-bold">123</strong>. Admin dapat menambah pengguna baru di halaman Admin.
-            </p>
-          </div>
-        </div>
 
       </div>
 

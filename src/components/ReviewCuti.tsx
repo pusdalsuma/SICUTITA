@@ -4,11 +4,12 @@ import { LeaveRequest, UserAccount } from '../types';
 interface ReviewCutiProps {
   requests: LeaveRequest[];
   onApprove: (id: string, role: 'atasan' | 'pejabat', status: string, name: string, nip: string, notes: string, signatureImg?: string) => void;
+  onDelete: (id: string) => void;
   onSelectRequest: (request: LeaveRequest) => void;
   currentUser?: UserAccount | null;
 }
 
-export const ReviewCuti: React.FC<ReviewCutiProps> = ({ requests, onApprove, onSelectRequest, currentUser }) => {
+export const ReviewCuti: React.FC<ReviewCutiProps> = ({ requests, onApprove, onDelete, onSelectRequest, currentUser }) => {
   const [selectedReqId, setSelectedReqId] = useState<string>(requests[0]?.id || '');
   const [role, setRole] = useState<'atasan' | 'pejabat'>('atasan');
   const [status, setStatus] = useState<'DISETUJUI' | 'PERUBAHAN' | 'DITANGGUHKAN' | 'TIDAK DISETUJUI'>('DISETUJUI');
@@ -161,6 +162,7 @@ export const ReviewCuti: React.FC<ReviewCutiProps> = ({ requests, onApprove, onS
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Approve form submitted');
     if (!selectedReqId) return;
     onApprove(selectedReqId, role, status, reviewerName, reviewerNip, notes, signatureDataUrl);
   };
@@ -185,13 +187,13 @@ export const ReviewCuti: React.FC<ReviewCutiProps> = ({ requests, onApprove, onS
         <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-2">📂 Daftar Masuk Pengajuan Cuti</h3>
         <div className="space-y-2">
           {requests.map((req) => (
-            <button
+            <div
               key={req.id}
               onClick={() => {
                 setSelectedReqId(req.id);
                 onSelectRequest(req);
               }}
-              className={`w-full text-left p-3.5 rounded-xl border transition flex flex-col ${
+              className={`w-full text-left p-3.5 rounded-xl border transition flex flex-col cursor-pointer ${
                 selectedReqId === req.id
                   ? 'bg-emerald-550/10 border-emerald-500/50 text-emerald-400'
                   : 'bg-slate-950/20 border-slate-850 hover:bg-slate-800/30 text-slate-350'
@@ -199,23 +201,39 @@ export const ReviewCuti: React.FC<ReviewCutiProps> = ({ requests, onApprove, onS
             >
               <div className="flex items-center justify-between w-full mb-1">
                 <span className="text-xs font-semibold text-white max-w-[150px] truncate">{req.pegawai.nama}</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                  req.statusPengajuan === 'SELESAI'
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                    : req.statusPengajuan === 'DISETUJUI_ATASAN'
-                    ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                    : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                }`}>
-                  {req.statusPengajuan === 'SELESAI'
-                    ? 'Selesai Pejabat'
-                    : req.statusPengajuan === 'DISETUJUI_ATASAN'
-                    ? 'Disetujui Atasan'
-                    : 'Menunggu Atasan'}
-                </span>
+                <div className="flex items-center gap-2">
+                  {currentUser?.role === 'admin' && (
+                    <button
+                      type="button"
+                      id={`delete-btn-${req.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('Delete button clicked for:', req.id);
+                        onDelete(req.id);
+                      }}
+                      className="text-[10px] bg-red-900/40 text-red-400 hover:bg-red-800/60 px-2 py-0.5 rounded-full font-bold uppercase transition cursor-pointer"
+                    >
+                      Hapus
+                    </button>
+                  )}
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                    req.statusPengajuan === 'SELESAI'
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : req.statusPengajuan === 'DISETUJUI_ATASAN'
+                      ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                      : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                  }`}>
+                    {req.statusPengajuan === 'SELESAI'
+                      ? 'Selesai Pejabat'
+                      : req.statusPengajuan === 'DISETUJUI_ATASAN'
+                      ? 'Disetujui Atasan'
+                      : 'Menunggu Atasan'}
+                  </span>
+                </div>
               </div>
               <span className="text-[11px] text-slate-450">{req.pegawai.jabatan}</span>
               <span className="text-[10px] text-slate-500 mt-2 font-mono">{req.lamanyaCuti} ({req.alasanCuti})</span>
-            </button>
+            </div>
           ))}
         </div>
       </div>
